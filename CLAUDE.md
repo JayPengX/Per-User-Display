@@ -6,6 +6,7 @@ connect, unlock) re-applies the signed-in user's mode from `%LOCALAPPDATA%\PerUs
 
 - `Set-Display.ps1`: the only code that changes the screen. Picks only a mode `EnumDisplaySettings`
   lists, tests with `CDS_TEST`, then applies with `CDS_UPDATEREGISTRY`. Main screen only.
+- Speed: the C# is compiled once to `%LOCALAPPDATA%\PerUserDisplay\PerUserDisplay-<hash>.dll` (Add-Type takes seconds); the task runs under `conhost --headless` when an install-time probe shows it works, so nothing shows at sign-in.
 - `Install.ps1` (via `Install.cmd`): copies the script into the user's LocalAppData, saves the current
   mode, registers the task (falls back to a Startup shortcut). `Uninstall.cmd` removes both.
 - Gotcha (cost a round trip, 2026-10-30): PowerShell passes `$null` to a `string` P/Invoke parameter

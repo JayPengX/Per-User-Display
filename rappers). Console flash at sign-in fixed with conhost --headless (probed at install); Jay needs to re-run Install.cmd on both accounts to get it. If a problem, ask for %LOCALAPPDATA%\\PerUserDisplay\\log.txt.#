@@ -1,0 +1,1 @@
+Works on the real PC (Jay 2026-10-31: both accounts, sign out/in). First version failed: PowerShell passes $null as "" to string P/Invoke params (fixed with C

@@ -18,7 +18,7 @@ $Home_   = Join-Path $env:LOCALAPPDATA 'PerUserDisplay'
 $Config  = Join-Path $Home_ 'settings.txt'
 $LogFile = Join-Path $Home_ 'log.txt'
 
-Add-Type -TypeDefinition @'
+$NativeCode = @'
 using System;
 using System.Runtime.InteropServices;
 
@@ -61,6 +61,21 @@ namespace PerUserDisplay {
   }
 }
 '@
+
+# Compiling the code above takes a few seconds, so keep the compiled copy next to the settings
+# (named by a hash of the code, so a changed script builds a new one) and load that afterwards.
+$hash = [BitConverter]::ToString((New-Object Security.Cryptography.SHA256Managed).ComputeHash([Text.Encoding]::UTF8.GetBytes($NativeCode))).Replace('-', '').Substring(0, 12)
+$Dll = Join-Path $Home_ "PerUserDisplay-$hash.dll"
+try {
+  if (-not (Test-Path $Dll)) {
+    New-Item -ItemType Directory -Force -Path $Home_ | Out-Null
+    Get-ChildItem $Home_ -Filter 'PerUserDisplay-*.dll' | Remove-Item -ErrorAction SilentlyContinue
+    Add-Type -TypeDefinition $NativeCode -OutputAssembly $Dll -OutputType Library
+  }
+  if (-not ('PerUserDisplay.Native' -as [type])) { Add-Type -Path $Dll }
+} catch {
+  if (-not ('PerUserDisplay.Native' -as [type])) { Add-Type -TypeDefinition $NativeCode }
+}
 
 $ENUM_CURRENT_SETTINGS = -1
 $CDS_UPDATEREGISTRY    = 0x1   # remember it (stored in this user's profile, not for everyone)
