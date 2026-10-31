@@ -11,7 +11,7 @@ it puts the main screen at *your* resolution and refresh rate.
 
 1. Download the zip above. Right-click it > **Properties** > tick **Unblock** > OK, then **Extract All**.
    Put the folder somewhere both accounts can reach, for example `C:\Users\Public\per-user-display`.
-   (After both accounts have installed, you can delete it: the install copies what it needs into each account.)
+   (After both accounts have installed you can delete it, since the install copies what it needs into each account. Keep it if you want **Save my resolution.cmd** handy.)
 2. Sign in as yourself and set the screen the way you want it:
    **Settings > System > Display** (resolution) and **Advanced display** (refresh rate).
 3. Double-click **Install.cmd**. It remembers what the screen is set to right now. No admin needed.
@@ -21,9 +21,11 @@ That's it. Sign out and back in to see it work.
 
 ## Change your setting later
 
-Open `%LOCALAPPDATA%\PerUserDisplay\` (paste that into the File Explorer address bar), edit
-**settings.txt**, save, and double-click **Apply now.cmd**. Or just set the screen in Settings
-and run Install.cmd again.
+Set the screen the way you want it in Settings, then double-click **Save my resolution.cmd** in this
+folder. It saves it for whoever is signed in, and only for them. (Running Install.cmd again does the same.)
+
+You can also edit the numbers by hand: open `%LOCALAPPDATA%\PerUserDisplay\` (paste that into the
+File Explorer address bar), edit **settings.txt**, save, and double-click **Apply now.cmd** there.
 
 ```
 Width=1920
