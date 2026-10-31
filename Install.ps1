@@ -18,7 +18,23 @@ if ($LASTEXITCODE -ne 0) { Write-Host 'Could not read the screen, so nothing was
   Set-Content -Path (Join-Path $dest 'Apply now.cmd') -Encoding ASCII
 
 $run = "-NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$dest\Set-Display.ps1`""
-$action    = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $run
+$exe = 'powershell.exe'
+$taskArgs = $run
+# -WindowStyle Hidden still flashes a console while the script starts. "conhost --headless" never shows one,
+# but it is undocumented, so only use it after checking it really runs a command on this PC.
+$probe = Join-Path $dest 'headless-check.txt'
+Remove-Item $probe -ErrorAction SilentlyContinue
+try {
+  Start-Process conhost.exe -WindowStyle Hidden -ArgumentList "--headless powershell.exe -NoProfile -Command `"Set-Content -Path '$probe' -Value ok`""
+  foreach ($i in 1..20) { if (Test-Path $probe) { break }; Start-Sleep -Milliseconds 500 }
+} catch { }
+if (Test-Path $probe) {
+  Remove-Item $probe -ErrorAction SilentlyContinue
+  $exe = 'conhost.exe'
+  $taskArgs = "--headless powershell.exe $run"
+}
+
+$action    = New-ScheduledTaskAction -Execute $exe -Argument $taskArgs
 $principal = New-ScheduledTaskPrincipal -UserId $me -LogonType Interactive -RunLevel Limited
 $settings  = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
                -ExecutionTimeLimit (New-TimeSpan -Minutes 2) -MultipleInstances IgnoreNew
@@ -47,8 +63,8 @@ try {
   $lnk = Join-Path ([Environment]::GetFolderPath('Startup')) 'Per-user display.lnk'
   $sh = New-Object -ComObject WScript.Shell
   $s = $sh.CreateShortcut($lnk)
-  $s.TargetPath = 'powershell.exe'
-  $s.Arguments = $run
+  $s.TargetPath = $exe
+  $s.Arguments = $taskArgs
   $s.WindowStyle = 7
   $s.Save()
   $how = 'a Startup shortcut (runs at sign-in; after a switch-user, double-click "Apply now.cmd")'

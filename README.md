@@ -47,7 +47,7 @@ If both of you stay signed in and switch with **Switch user**, the tool also run
 to your account (and when you unlock it), so the screen follows whoever is at the keyboard.
 On the rare PC where Windows won't allow that trigger, Install.cmd uses a Startup shortcut instead:
 it still works at sign-in, and after a switch you double-click **Apply now.cmd**.
-A small PowerShell window may flash for a moment when it runs.
+It runs with no window. (On an older Windows without that option, a small window may flash for a moment.)
 
 ## Undo
 
