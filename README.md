@@ -34,7 +34,8 @@ RefreshRate=144
 ```
 
 `RefreshRate=0` means "the highest this resolution allows". To see every mode your screen
-supports, run in PowerShell: `& "$env:LOCALAPPDATA\PerUserDisplay\Set-Display.ps1" -List`
+supports, press Win+R, run `%LOCALAPPDATA%\PerUserDisplay\PerUserDisplay.exe list`, and open
+`modes.txt` in that folder.
 
 ## Safety
 
@@ -49,7 +50,8 @@ If both of you stay signed in and switch with **Switch user**, the tool also run
 to your account (and when you unlock it), so the screen follows whoever is at the keyboard.
 On the rare PC where Windows won't allow that trigger, Install.cmd uses a Startup shortcut instead:
 it still works at sign-in, and after a switch you double-click **Apply now.cmd**.
-It runs with no window. (On an older Windows without that option, a small window may flash for a moment.)
+It runs a tiny windowless program (built on your PC by Install.cmd from `PerUserDisplay.cs`),
+so it starts the moment you sign in, with nothing on screen.
 
 ## Undo
 
