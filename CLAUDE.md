@@ -9,6 +9,9 @@ connect, unlock) re-applies the signed-in user's mode from `%LOCALAPPDATA%\PerUs
   so sign-in starts a windowless exe directly (no PowerShell startup, no console). That compiler is C# 5:
   no `$""`, no `out var`, no Linq. Picks only a mode `EnumDisplaySettings` lists, tests with `CDS_TEST`,
   then applies with `CDS_UPDATEREGISTRY`. Main screen only.
+  The task runs `PerUserDisplay.exe watch`: it re-checks every 2 s for 60 s and re-applies, because at a cold boot
+  the first try often failed (driver not ready / short mode list / Windows restoring its mode afterward, 2026-11-01).
+  No argument = retry up to 10 s until it sticks (Apply now.cmd).
 - `Install.ps1` (via `Install.cmd`): builds the exe, saves the current mode, registers the task (priority 4;
   falls back to a Startup shortcut). `Change my resolution.cmd` = `PerUserDisplay.exe save`. `Uninstall.cmd` removes all.
 - History (2026-10-30/31): a PowerShell version showed a console for 10-20 s at a fresh sign-in (PowerShell

@@ -30,7 +30,7 @@ Write-Host "Saved: $($s.Width) x $($s.Height) at $($s.RefreshRate) Hz"
 "@start `"`" /wait `"%~dp0PerUserDisplay.exe`"`r`n@powershell.exe -NoProfile -Command `"Get-Content -Tail 3 -LiteralPath '%~dp0log.txt'`"`r`n@pause" |
   Set-Content -Path (Join-Path $dest 'Apply now.cmd') -Encoding ASCII
 
-$action    = New-ScheduledTaskAction -Execute $exe
+$action    = New-ScheduledTaskAction -Execute $exe -Argument 'watch'
 $principal = New-ScheduledTaskPrincipal -UserId $me -LogonType Interactive -RunLevel Limited
 # Priority 4 instead of the default 7 (below normal), so it isn't kept waiting behind everything else at sign-in.
 $settings  = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
@@ -62,6 +62,7 @@ try {
   $sh = New-Object -ComObject WScript.Shell
   $sc = $sh.CreateShortcut($lnk)
   $sc.TargetPath = $exe
+  $sc.Arguments = 'watch'
   $sc.Save()
   $how = 'a Startup shortcut (runs at sign-in; after a switch-user, double-click "Apply now.cmd")'
 }

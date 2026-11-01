@@ -42,7 +42,11 @@ supports, press Win+R, run `%LOCALAPPDATA%\PerUserDisplay\PerUserDisplay.exe lis
 - It only uses a mode the screen itself lists, and asks the graphics driver to test it before switching.
 - If your resolution isn't supported (say a different monitor is plugged in), it leaves the screen alone.
 - If your refresh rate isn't offered, it uses the closest one below it.
-- It only changes the main screen. Every run writes one line to `%LOCALAPPDATA%\PerUserDisplay\log.txt`.
+- It only changes the main screen. Every run writes what it did to `%LOCALAPPDATA%\PerUserDisplay\log.txt`.
+- Right after Windows starts, the screen often isn't ready yet at sign-in (or Windows puts its own mode
+  back a few seconds later), so for the first minute after you sign in it keeps checking and sets your
+  mode again if needed. If you change the resolution in Settings during that minute, it may switch back:
+  wait a minute, then change it.
 
 ## Fast user switching
 

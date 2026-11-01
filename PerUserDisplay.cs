@@ -6,7 +6,8 @@
 // switch back to your account). It is a small windowless program, so it starts in a moment
 // even while Windows is still busy loading your desktop.
 //
-//   PerUserDisplay.exe          apply settings.txt (what the scheduled task runs)
+//   PerUserDisplay.exe watch    apply settings.txt and keep it applied for 60 s (what sign-in runs)
+//   PerUserDisplay.exe          apply settings.txt once, retrying for up to 10 s (Apply now.cmd)
 //   PerUserDisplay.exe save     write the screen's current mode into settings.txt
 //   PerUserDisplay.exe list     write every mode the main screen supports into modes.txt
 //
@@ -17,6 +18,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 
 namespace PerUserDisplay {
   [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
@@ -61,7 +63,8 @@ namespace PerUserDisplay {
         string command = args.Length > 0 ? args[0].ToLowerInvariant() : "apply";
         if (command == "save") return Save();
         if (command == "list") return List();
-        return Apply();
+        if (command == "watch") return Apply(true);
+        return Apply(false);
       } catch (Exception e) {
         Log("Error: " + e.Message);
         return 1;
@@ -137,8 +140,34 @@ namespace PerUserDisplay {
       return s;
     }
 
-    static int Apply() {
+    // Right after Windows starts, the screen is often not ready when sign-in runs this: the driver
+    // can still be loading (so the mode list is short or the change is refused), and Windows can
+    // put its own mode back a few seconds later. So keep checking for a while and set it again
+    // whenever it is not this user's mode. "watch" (what the sign-in task runs) keeps at it for
+    // 60 s; a plain run (Apply now.cmd) stops as soon as the screen is right, or after 10 s.
+    static int Apply(bool watch) {
       Dictionary<string, int> want = ReadSettings();
+      DateTime end = DateTime.UtcNow.AddSeconds(watch ? 60 : 10);
+      string last = null;
+      bool ok = false;
+      bool first = true;
+      while (true) {
+        string msg;
+        try { ok = ApplyOnce(want, first, out msg); }
+        catch (Exception e) { ok = false; msg = "Not yet: " + e.Message; }
+        if (msg != null && msg != last) { Log(msg); last = msg; }
+        first = false;
+        if (ok && !watch) break;
+        if (DateTime.UtcNow >= end) break;
+        Thread.Sleep(2000);
+      }
+      if (!ok && last != null) Log("Gave up for now; the last try said: " + last);
+      return ok ? 0 : 1;
+    }
+
+    // One try. True when the screen is now at the best mode for this user's setting.
+    // msg is what to write to the log (null: nothing worth writing).
+    static bool ApplyOnce(Dictionary<string, int> want, bool first, out string msg) {
       int w = want["Width"], h = want["Height"], hz = want["RefreshRate"];
       DEVMODE cur = Current();
       string was = cur.dmPelsWidth + "x" + cur.dmPelsHeight + "@" + cur.dmDisplayFrequency;
@@ -146,24 +175,25 @@ namespace PerUserDisplay {
       List<Mode> modes = new List<Mode>();
       foreach (Mode m in SupportedModes()) if (m.Width == w && m.Height == h) modes.Add(m);   // sorted by refresh rate
       if (modes.Count == 0) {
-        Log("Skipped: the screen does not support " + w + "x" + h + ". Left it at " + was + ".");
-        return 0;
+        msg = "Not yet: the screen does not offer " + w + "x" + h + " (now " + was + ").";
+        return false;
       }
 
       // Exact refresh rate if the screen has it; otherwise the highest one below it; otherwise the lowest there is.
       // RefreshRate=0 takes the highest.
       Mode pick = null;
+      string note = "";
       if (hz > 0) {
         foreach (Mode m in modes) if (m.RefreshRate <= hz) pick = m;
         if (pick == null) pick = modes[0];
-        if (pick.RefreshRate != hz) Log(hz + " Hz is not offered at " + w + "x" + h + "; using " + pick.RefreshRate + " Hz.");
+        if (pick.RefreshRate != hz) note = " (" + hz + " Hz is not offered at " + w + "x" + h + " right now)";
       } else {
         pick = modes[modes.Count - 1];
       }
 
       if (cur.dmPelsWidth == pick.Width && cur.dmPelsHeight == pick.Height && cur.dmDisplayFrequency == pick.RefreshRate) {
-        Log("Already " + pick + ".");
-        return 0;
+        msg = first ? "Already " + pick + note + "." : null;
+        return true;
       }
 
       DEVMODE dm = cur;
@@ -174,13 +204,16 @@ namespace PerUserDisplay {
 
       int test = ChangeDisplaySettingsEx(null, ref dm, IntPtr.Zero, CDS_TEST, IntPtr.Zero);
       if (test != 0) {
-        Log("Skipped: the driver refused " + pick + " in a test (code " + test + "). Nothing changed.");
-        return 0;
+        msg = "Not yet: the driver refused " + pick + " in a test (code " + test + "). Still " + was + ".";
+        return false;
       }
       int result = ChangeDisplaySettingsEx(null, ref dm, IntPtr.Zero, CDS_UPDATEREGISTRY, IntPtr.Zero);
-      if (result == 0) Log("Set " + pick + " (was " + was + ").");
-      else Log("Change failed (code " + result + "). Nothing changed.");
-      return result == 0 ? 0 : 1;
+      if (result != 0) {
+        msg = "Not yet: changing to " + pick + " failed (code " + result + "). Still " + was + ".";
+        return false;
+      }
+      msg = "Set " + pick + note + " (was " + was + ").";
+      return true;
     }
 
     static void Log(string text) {
